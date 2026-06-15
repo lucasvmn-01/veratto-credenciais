@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Credenciais - Veratto</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 for beautiful alerts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        .tab-transition {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .suggestion-item {
+            transition: all 0.2s ease;
+        }
+        .suggestion-item:hover {
+            background-color: #f1f5f9;
+            transform: translateX(4px);
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .premium-shadow {
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Header Principal -->
+    <header class="glassmorphism text-slate-800 shadow-sm py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-800">VERATTO</h1>
+                    <p class="text-xs text-slate-500 font-medium">Portal Interno de Credenciais</p>
+                </div>
+            </div>
+            
+            <!-- Abas de Navegação -->
+            <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button id="tab-self-service" onclick="switchTab('self-service')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-blue-700 shadow-sm border border-slate-200/50">
+                    <i class="fa-solid fa-key mr-2"></i>Recuperar Senha
+                </button>
+                <button id="tab-admin" onclick="switchTab('admin')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-500 hover:text-slate-800">
+                    <i class="fa-solid fa-users-gear mr-2"></i>Diretório Geral (Admin)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-8 flex items-center justify-center relative">
+        <!-- Background Elements -->
+        <div class="absolute top-[-10%] left-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- ========================================== -->
+        <!-- SEÇÃO 1: RECUPERADOR DE SENHA (SELF SERVICE) -->
+        <!-- ========================================== -->
+        <section id="section-self-service" class="w-full max-w-lg tab-transition z-10">
+            <div class="bg-white rounded-2xl premium-shadow border border-slate-100 overflow-hidden">
+                <!-- Top Header do Card -->
+                <div class="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-8 text-white text-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4 shadow-inner border border-white/10">
+                        <i class="fa-solid fa-lock-open text-3xl text-blue-200"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-tight">Consulte sua Senha</h2>
+                    <p class="text-sm text-blue-200/80 mt-2 font-medium">Insira seu e-mail corporativo para iniciar a verificação</p>
+                </div>
+
+                <!-- Formulário Dinâmico -->
+                <form id="recoverForm" class="p-6 md:p-8 space-y-6" onsubmit="handleFormSubmission(event)">
+                    
+                    <!-- Passo 1: E-mail Corporativo -->
+                    <div class="relative">
+                        <label for="emailInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-envelope text-blue-500"></i> E-mail Corporativo
+                        </label>
+                        <div class="relative">
+                            <input type="email" id="emailInput" required autocomplete="off"
+                                class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-0 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white" 
+                                placeholder="nome@veratto.com.br" oninput="onEmailChange(this.value)">
+                            <div class="absolute left-4 top-3.5 text-slate-400">
+                                <i class="fa-solid fa-at"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos Condicionais -->
+                    <div id="dynamicFieldsContainer" class="hidden space-y-6 border-t border-slate-100 pt-6 animate-fade-in">
+                        
+                        <!-- Status Badge -->
+                        <div class="flex items-center gap-2 text-sm font-bold py-2 px-4 rounded-xl" id="statusBadge"></div>
+
+                        <!-- Campo: Nome Completo -->
+                        <div id="fieldGroupNome" class="hidden">
+                            <label for="nomeInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-user text-blue-500"></i> Nome Completo
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="nomeInput"
+                                    class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white" 
+                                    placeholder="Seu nome completo">
+                                <div class="absolute left-4 top-3.5 text-slate-400">
+                                    <i class="fa-solid fa-signature"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campo: Departamento -->
+                        <div id="fieldGroupDepto" class="hidden">
+                            <label for="deptoInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-briefcase text-blue-500"></i> Departamento
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="deptoInput"
+                                    class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white" 
+                                    placeholder="Seu departamento">
+                                <div class="absolute left-4 top-3.5 text-slate-400">
+                                    <i class="fa-solid fa-building"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campo: CPF -->
+                        <div>
+                            <label for="cpfInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-address-card text-blue-500"></i> CPF
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="cpfInput" required maxlength="14"
+                                    class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white" 
+                                    placeholder="000.000.000-00" oninput="maskCPF(this)">
+                                <div class="absolute left-4 top-3.5 text-slate-400">
+                                    <i class="fa-solid fa-fingerprint"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grid para Nascimento e Telefone -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label for="nascimentoInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-calendar-days text-blue-500"></i> Nascimento
+                                </label>
+                                <input type="date" id="nascimentoInput" required
+                                    class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white">
+                            </div>
+
+                            <div>
+                                <label for="telefoneInput" class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-phone text-blue-500"></i> Telefone
+                                </label>
+                                <div class="relative">
+                                    <input type="text" id="telefoneInput" required placeholder="(00) 90000-0000"
+                                        class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-base font-medium text-slate-800 bg-slate-50 focus:bg-white"
+                                        oninput="maskPhone(this)">
+                                    <div class="absolute left-4 top-3.5 text-slate-400">
+                                        <i class="fa-solid fa-mobile-button"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Envio Dinâmico -->
+                    <button type="submit" id="submitBtn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-slate-900/20 transition-all duration-200 flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-magnifying-glass"></i> Verificar Cadastro
+                    </button>
+                </form>
+
+                <!-- Box de Resultados (Sucesso, Pendente ou Erro) -->
+                <div id="resultBox" class="mx-6 md:mx-8 mb-6 md:mb-8 p-6 rounded-xl border hidden animate-fade-in relative overflow-hidden">
+                    <div class="flex items-start gap-4 relative z-10">
+                        <div id="resultIcon" class="p-3 rounded-xl text-white shadow-md">
+                            <!-- Ícone Dinâmico -->
+                        </div>
+                        <div class="flex-grow space-y-2">
+                            <h4 id="resultTitle" class="font-bold text-lg"></h4>
+                            <div id="resultContent" class="text-sm font-medium"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SEÇÃO LOGIN ADMINISTRATIVO -->
+        <!-- ========================================== -->
+        <section id="section-admin-login" class="w-full max-w-md hidden tab-transition z-10">
+            <div class="bg-white rounded-2xl premium-shadow border border-slate-100 overflow-hidden">
+                <div class="bg-slate-900 text-white p-8 text-center relative">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800 mb-4 shadow-inner">
+                        <i class="fa-solid fa-user-shield text-3xl text-blue-400"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-tight">Acesso Restrito</h2>
+                    <p class="text-sm text-slate-400 mt-2 font-medium">Painel Administrativo Veratto</p>
+                </div>
+
+                <form id="adminLoginForm" class="p-8 space-y-6" onsubmit="handleAdminLogin(event)">
+                    <div>
+                        <label for="adminEmail" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">E-mail Administrativo</label>
+                        <div class="relative">
+                            <input type="email" id="adminEmail" required class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-sm font-medium bg-slate-50 focus:bg-white" placeholder="admin@veratto.com.br">
+                            <div class="absolute left-4 top-3.5 text-slate-400"><i class="fa-solid fa-at"></i></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="adminPassword" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Senha de Acesso</label>
+                        <div class="relative">
+                            <input type="password" id="adminPassword" required class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors text-sm font-medium bg-slate-50 focus:bg-white" placeholder="••••••••">
+                            <div class="absolute left-4 top-3.5 text-slate-400"><i class="fa-solid fa-key"></i></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all">
+                        Autenticar Painel
+                    </button>
+                    <div id="loginError" class="text-sm text-rose-600 font-bold text-center hidden animate-fade-in bg-rose-50 p-3 rounded-lg">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> Credenciais inválidas.
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SEÇÃO: DIRETÓRIO DE ADMINISTRAÇÃO -->
+        <!-- ========================================== -->
+        <section id="section-admin-dashboard" class="w-full max-w-6xl hidden tab-transition z-10">
+            <div class="bg-white rounded-2xl premium-shadow border border-slate-100 overflow-hidden">
+                
+                <!-- Admin Header -->
+                <div class="bg-gradient-to-r from-slate-900 to-blue-900 text-white p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-xl border border-white/20 shadow-inner">
+                            <i class="fa-solid fa-user-tie text-blue-300"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Painel Administrativo</h2>
+                            <p class="text-sm text-blue-200 font-medium">Controle de Credenciais</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="sub-tab-requests" onclick="switchAdminSubTab('requests')" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-blue-800 shadow-lg">
+                            <i class="fa-solid fa-bell mr-2"></i>Solicitações (<span id="requests-badge">0</span>)
+                        </button>
+                        <button id="sub-tab-directory" onclick="switchAdminSubTab('directory')" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-blue-100 hover:bg-white/10">
+                            <i class="fa-solid fa-table-list mr-2"></i>Diretório
+                        </button>
+                        <button onclick="logoutAdmin()" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 border border-rose-500/30">
+                            <i class="fa-solid fa-power-off"></i> Sair
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estatísticas Rápidas -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-5 premium-shadow">
+                        <div class="p-4 rounded-xl bg-blue-50 text-blue-600 shadow-inner"><i class="fa-solid fa-users text-2xl"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Colaboradores</p>
+                            <h3 class="text-3xl font-extrabold text-slate-800" id="stat-total">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-5 premium-shadow">
+                        <div class="p-4 rounded-xl bg-amber-50 text-amber-500 shadow-inner"><i class="fa-solid fa-clock-rotate-left text-2xl"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Pendentes</p>
+                            <h3 class="text-3xl font-extrabold text-amber-600" id="stat-pending">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-5 premium-shadow">
+                        <div class="p-4 rounded-xl bg-emerald-50 text-emerald-500 shadow-inner"><i class="fa-solid fa-shield-check text-2xl"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Cadastros Completos</p>
+                            <h3 class="text-3xl font-extrabold text-emerald-600" id="stat-completed">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-SEÇÃO 1: SOLICITAÇÕES -->
+                <div id="panel-requests" class="p-8">
+                    <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> Solicitações Pendentes
+                    </h3>
+
+                    <div class="overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-extrabold tracking-wider border-b border-slate-200">
+                                    <th class="py-4 px-6">ID</th>
+                                    <th class="py-4 px-6">E-mail</th>
+                                    <th class="py-4 px-6">Nome / CPF</th>
+                                    <th class="py-4 px-6">Nascimento / Tel</th>
+                                    <th class="py-4 px-6 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsTableBody" class="divide-y divide-slate-100 text-sm font-medium bg-white">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SUB-SEÇÃO 2: DIRETÓRIO -->
+                <div id="panel-directory" class="hidden">
+                    <div class="p-8 border-b border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between bg-white">
+                        <div class="relative w-full md:max-w-md">
+                            <input type="text" id="adminSearch" oninput="filterAdminTable()" 
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors font-medium bg-slate-50 focus:bg-white"
+                                placeholder="Buscar colaboradores...">
+                            <div class="absolute left-4 top-3.5 text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto p-8 pt-0">
+                        <table class="w-full text-left border-collapse border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-extrabold tracking-wider border-b border-slate-200">
+                                    <th class="py-4 px-6">Usuário</th>
+                                    <th class="py-4 px-6">E-mail Corporativo</th>
+                                    <th class="py-4 px-6">Departamento</th>
+                                    <th class="py-4 px-6">CPF</th>
+                                    <th class="py-4 px-6 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody" class="divide-y divide-slate-100 text-sm font-medium bg-white">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
