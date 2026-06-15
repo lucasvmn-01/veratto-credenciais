@@ -375,6 +375,7 @@
             </div>
             <form id="editUserForm" onsubmit="saveEditUser(event)" class="p-6 space-y-4">
                 <input type="hidden" id="editEmail">
+                <input type="hidden" id="editOldCpf">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Nome Completo</label>
                     <input type="text" id="editNome" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
@@ -394,6 +395,10 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Data de Nascimento (Opcional)</label>
                     <input type="date" id="editNascimento" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div class="pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-emerald-600 mb-1"><i class="fa-solid fa-key mr-1"></i>Senha de Acesso</label>
+                    <input type="text" id="editSenha" class="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:border-emerald-500 text-sm font-mono bg-emerald-50 text-emerald-800" placeholder="Digite para alterar ou definir">
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="document.getElementById('editUserModal').classList.add('hidden')" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors">Cancelar</button>

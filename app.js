@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 // COLOQUE SUAS CHAVES DO FIREBASE AQUI
@@ -436,12 +436,13 @@ window.approveRequest = async function(id, email, cpf, nome, nascimento, telefon
     }
 }
 
-window.openEditModal = function(email) {
+window.openEditModal = async function(email) {
     if (!window.allUsers) return;
     const u = window.allUsers.find(x => x.email === email);
     if (!u) return;
 
     document.getElementById('editEmail').value = u.email;
+    document.getElementById('editOldCpf').value = u.cpf || '';
     document.getElementById('editNome').value = u.nome || '';
     document.getElementById('editDepto').value = u.depto || '';
     document.getElementById('editCpf').value = u.cpf || '';
@@ -454,17 +455,37 @@ window.openEditModal = function(email) {
         if (p.length === 3) nasc = `${p[2]}-${p[1]}-${p[0]}`;
     }
     document.getElementById('editNascimento').value = nasc;
+    
+    document.getElementById('editSenha').value = '';
+    document.getElementById('editSenha').placeholder = 'Carregando...';
 
     document.getElementById('editUserModal').classList.remove('hidden');
+    
+    if (u.cpf) {
+        try {
+            const senhaSnap = await getDoc(doc(db, 'senhas', `${email}_${u.cpf}`));
+            if (senhaSnap.exists()) {
+                document.getElementById('editSenha').value = senhaSnap.data().senha;
+            } else {
+                document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
+            }
+        } catch(e) {
+            document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
+        }
+    } else {
+        document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
+    }
 }
 
 window.saveEditUser = async function(event) {
     event.preventDefault();
     const email = document.getElementById('editEmail').value;
+    const oldCpf = document.getElementById('editOldCpf').value.replace(/\D/g, '');
     const nome = document.getElementById('editNome').value;
     const depto = document.getElementById('editDepto').value;
     const cpf = document.getElementById('editCpf').value.replace(/\D/g, '');
     const telefone = document.getElementById('editTelefone').value.replace(/\D/g, '');
+    const senha = document.getElementById('editSenha').value;
     
     // Ler data que vem como YYYY-MM-DD do input="date"
     let nascimento = document.getElementById('editNascimento').value;
@@ -480,6 +501,14 @@ window.saveEditUser = async function(event) {
         
         await updateDoc(doc(db, 'usuarios', email), { nome, depto });
         await updateDoc(doc(db, 'usuarios_private', email), { cpf, telefone, nascimento });
+        
+        // Se CPF ou Senha mudou, atualizar a coleção de senhas
+        if (cpf && senha) {
+            if (oldCpf && oldCpf !== cpf) {
+                try { await deleteDoc(doc(db, 'senhas', `${email}_${oldCpf}`)); } catch(e){}
+            }
+            await setDoc(doc(db, 'senhas', `${email}_${cpf}`), { senha });
+        }
 
         document.getElementById('editUserModal').classList.add('hidden');
         Swal.close();
