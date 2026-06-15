@@ -276,12 +276,23 @@ window.logoutAdmin = async function() {
 async function loadAdminDashboard() {
     try {
         const usersSnap = await getDocs(collection(db, "usuarios"));
+        const privateSnap = await getDocs(collection(db, "usuarios_private"));
         const reqSnap = await getDocs(query(collection(db, "solicitacoes"), where("status", "==", "pendente")));
+
+        const privateData = {};
+        privateSnap.forEach(doc => {
+            privateData[doc.id] = doc.data();
+        });
 
         const users = [];
         let completedCount = 0;
         usersSnap.forEach(doc => {
             const u = doc.data();
+            const p = privateData[doc.id] || {};
+            u.cpf = p.cpf || '';
+            u.telefone = p.telefone || '';
+            u.nascimento = p.nascimento || '';
+            
             users.push(u);
             if (u.hasCpf) completedCount++;
         });
@@ -366,7 +377,11 @@ window.filterAdminTable = function() {
             </td>
             <td class="py-4 px-6 font-medium text-blue-600">${u.email}</td>
             <td class="py-4 px-6 text-slate-600">${u.depto}</td>
-            <td class="py-4 px-6 font-mono text-sm text-slate-500">${u.hasCpf ? '***' : '-'}</td>
+            <td class="py-4 px-6">
+                <div class="font-mono text-sm text-slate-800">${u.cpf || '-'}</div>
+                ${u.telefone ? `<div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>${u.telefone}</div>` : ''}
+                ${u.nascimento ? `<div class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-cake-candles mr-1"></i>${u.nascimento}</div>` : ''}
+            </td>
             <td class="py-4 px-6 text-center">${statusBadge}</td>
         `;
         tbody.appendChild(tr);
