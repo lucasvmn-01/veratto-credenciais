@@ -293,8 +293,10 @@ async function loadAdminDashboard() {
             u.telefone = p.telefone || '';
             u.nascimento = p.nascimento || '';
             
+            u.isFullyComplete = !!(u.cpf && u.nome && u.depto && u.telefone && u.nascimento);
+            
             users.push(u);
-            if (u.hasCpf) completedCount++;
+            if (u.isFullyComplete) completedCount++;
         });
 
         const requests = [];
@@ -364,9 +366,25 @@ window.filterAdminTable = function() {
     );
 
     filtered.forEach(u => {
-        const statusBadge = u.hasCpf 
-            ? `<span class="bg-emerald-100 text-emerald-700 py-1 px-3 rounded-lg text-xs font-bold"><i class="fa-solid fa-check mr-1"></i> Completo</span>`
-            : `<span class="bg-amber-100 text-amber-700 py-1 px-3 rounded-lg text-xs font-bold"><i class="fa-solid fa-exclamation mr-1"></i> Incompleto</span>`;
+        const statusBadge = u.isFullyComplete 
+            ? `<span class="bg-emerald-100 text-emerald-700 py-1 px-3 rounded-lg text-xs font-bold w-full block text-center"><i class="fa-solid fa-check mr-1"></i> Completo</span>`
+            : `<span class="bg-amber-100 text-amber-700 py-1 px-3 rounded-lg text-xs font-bold w-full block text-center"><i class="fa-solid fa-exclamation mr-1"></i> Incompleto</span>`;
+
+        let telHtml = '';
+        if (u.telefone) {
+            const digits = u.telefone.replace(/\D/g, '');
+            if (digits.length >= 10) {
+                telHtml = `<a href="https://wa.me/55${digits}" target="_blank" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline mt-1 block"><i class="fa-brands fa-whatsapp mr-1"></i>${u.telefone}</a>`;
+            } else {
+                telHtml = `<div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>${u.telefone}</div>`;
+            }
+        }
+
+        let nascFormatado = u.nascimento || '';
+        if (nascFormatado.includes('-')) {
+            const p = nascFormatado.split('-');
+            if (p.length === 3) nascFormatado = `${p[2]}/${p[1]}/${p[0]}`;
+        }
 
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition-colors";
@@ -379,10 +397,15 @@ window.filterAdminTable = function() {
             <td class="py-4 px-6 text-slate-600">${u.depto}</td>
             <td class="py-4 px-6">
                 <div class="font-mono text-sm text-slate-800">${u.cpf || '-'}</div>
-                ${u.telefone ? `<div class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>${u.telefone}</div>` : ''}
-                ${u.nascimento ? `<div class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-cake-candles mr-1"></i>${u.nascimento}</div>` : ''}
+                ${telHtml}
+                ${nascFormatado ? `<div class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-cake-candles mr-1"></i>${nascFormatado}</div>` : ''}
             </td>
-            <td class="py-4 px-6 text-center">${statusBadge}</td>
+            <td class="py-4 px-6">
+                <div class="flex flex-col items-center justify-center gap-2">
+                    ${statusBadge}
+                    <button onclick="openEditModal('${u.email}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors px-3 py-1 rounded bg-blue-50 w-full"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
+                </div>
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -410,5 +433,72 @@ window.approveRequest = async function(id, email, cpf, nome, nascimento, telefon
     } catch (error) {
         console.error(error);
         Swal.fire('Erro', 'Ocorreu um erro ao aprovar.', 'error');
+    }
+}
+
+window.openEditModal = function(email) {
+    if (!window.allUsers) return;
+    const u = window.allUsers.find(x => x.email === email);
+    if (!u) return;
+
+    document.getElementById('editEmail').value = u.email;
+    document.getElementById('editNome').value = u.nome || '';
+    document.getElementById('editDepto').value = u.depto || '';
+    document.getElementById('editCpf').value = u.cpf || '';
+    document.getElementById('editTelefone').value = u.telefone || '';
+    
+    // Converter DD/MM/AAAA para YYYY-MM-DD para o input type="date"
+    let nasc = u.nascimento || '';
+    if (nasc.includes('/')) {
+        const p = nasc.split('/');
+        if (p.length === 3) nasc = `${p[2]}-${p[1]}-${p[0]}`;
+    }
+    document.getElementById('editNascimento').value = nasc;
+
+    document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+window.saveEditUser = async function(event) {
+    event.preventDefault();
+    const email = document.getElementById('editEmail').value;
+    const nome = document.getElementById('editNome').value;
+    const depto = document.getElementById('editDepto').value;
+    const cpf = document.getElementById('editCpf').value.replace(/\D/g, '');
+    const telefone = document.getElementById('editTelefone').value.replace(/\D/g, '');
+    
+    // Ler data que vem como YYYY-MM-DD do input="date"
+    let nascimento = document.getElementById('editNascimento').value;
+    if (nascimento && nascimento.includes('-')) {
+        const p = nascimento.split('-');
+        if (p.length === 3) nascimento = `${p[2]}/${p[1]}/${p[0]}`;
+    } else if (!nascimento) {
+        nascimento = '';
+    }
+
+    try {
+        Swal.fire({title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        
+        await updateDoc(doc(db, 'usuarios', email), { nome, depto });
+        await updateDoc(doc(db, 'usuarios_private', email), { cpf, telefone, nascimento });
+
+        document.getElementById('editUserModal').classList.add('hidden');
+        Swal.close();
+        
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        Toast.fire({
+            icon: 'success',
+            title: 'Dados salvos com sucesso!'
+        });
+        
+        loadAdminDashboard();
+    } catch (error) {
+        console.error(error);
+        Swal.fire('Erro', 'Ocorreu um erro ao salvar.', 'error');
     }
 }
