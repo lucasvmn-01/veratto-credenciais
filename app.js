@@ -404,7 +404,6 @@ window.filterAdminTable = function() {
                 <div class="flex flex-col items-center justify-center gap-2">
                     ${statusBadge}
                     <button onclick="openEditModal('${u.email}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors px-3 py-1 rounded bg-blue-50 w-full"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
-                    <button onclick="deleteUser('${u.email}', '${u.cpf || ''}')" class="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors px-3 py-1 rounded bg-rose-50 w-full"><i class="fa-solid fa-trash mr-1"></i> Excluir</button>
                 </div>
             </td>
         `;
@@ -683,4 +682,11 @@ window.deleteUser = async function(email, cpf) {
             Swal.fire('Erro', 'Ocorreu um erro ao excluir o usuário.', 'error');
         }
     }
+}
+
+window.deleteUserFromEdit = function() {
+    const email = document.getElementById('editEmail').value;
+    const cpf = document.getElementById('editCpf').value.replace(/\D/g, '');
+    document.getElementById('editUserModal').classList.add('hidden');
+    deleteUser(email, cpf);
 }
