@@ -220,7 +220,13 @@ window.handleFormSubmission = async function(event) {
             });
 
             Swal.close();
-            showResultBox(true, 'Solicitação Enviada!', 'Seus dados foram enviados para o administrador.', 'blue', 'fa-paper-plane');
+            const waLink = `https://wa.me/5599991435297?text=${encodeURIComponent("Dados preenchidos aguardando a senha.")}`;
+            showResultBox(true, 'Solicitação Enviada!', `
+                <p class="mb-4">Seus dados foram enviados para o administrador e estão em análise.</p>
+                <a href="${waLink}" target="_blank" class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white font-bold py-3 px-5 rounded-xl shadow-lg shadow-[#25D366]/30 transition-all">
+                    <i class="fa-brands fa-whatsapp text-xl"></i> Solicitar via WhatsApp
+                </a>
+            `, 'blue', 'fa-paper-plane');
             document.getElementById('recoverForm').reset();
             document.getElementById('dynamicFieldsContainer').classList.add('hidden');
             currentSelectedUser = null;
@@ -292,6 +298,7 @@ async function loadAdminDashboard() {
             u.cpf = p.cpf || '';
             u.telefone = p.telefone || '';
             u.nascimento = p.nascimento || '';
+            u.senha_backup = p.senha || '';
             
             u.isFullyComplete = !!(u.cpf && u.nome && u.depto && u.telefone && u.nascimento);
             
@@ -417,7 +424,13 @@ window.approveRequest = async function(id, email, cpf, nome, nascimento, telefon
         await updateDoc(doc(db, 'usuarios', email), { hasCpf: true, nome, depto });
         
         // Atualiza usuarios_private
-        await setDoc(doc(db, 'usuarios_private', email), { cpf, nascimento, telefone });
+        await setDoc(doc(db, 'usuarios_private', email), { cpf, nascimento, telefone }, { merge: true });
+
+        // Retrieve the backup password from usuarios_private
+        const privDoc = await getDoc(doc(db, 'usuarios_private', email));
+        if (privDoc.exists() && privDoc.data().senha) {
+            await setDoc(doc(db, 'senhas', `${email}_${cpf}`), { senha: privDoc.data().senha });
+        }
 
         // Atualiza status do request
         await updateDoc(doc(db, 'solicitacoes', id), { status: 'aprovado' });
@@ -467,12 +480,15 @@ window.openEditModal = async function(email) {
             if (senhaSnap.exists()) {
                 document.getElementById('editSenha').value = senhaSnap.data().senha;
             } else {
+                document.getElementById('editSenha').value = u.senha_backup || '';
                 document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
             }
         } catch(e) {
+            document.getElementById('editSenha').value = u.senha_backup || '';
             document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
         }
     } else {
+        document.getElementById('editSenha').value = u.senha_backup || '';
         document.getElementById('editSenha').placeholder = 'Digite para alterar ou definir';
     }
 }
@@ -500,7 +516,10 @@ window.saveEditUser = async function(event) {
         Swal.fire({title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
         
         await updateDoc(doc(db, 'usuarios', email), { nome, depto });
-        await updateDoc(doc(db, 'usuarios_private', email), { cpf, telefone, nascimento });
+        
+        const privData = { cpf, telefone, nascimento };
+        if (senha) privData.senha = senha;
+        await updateDoc(doc(db, 'usuarios_private', email), privData);
         
         // Se CPF ou Senha mudou, atualizar a coleção de senhas
         if (cpf && senha) {
@@ -562,9 +581,9 @@ window.saveNewUser = async function(event) {
             email, usuario, nome, depto, hasCpf: !!cpf 
         });
         
-        await setDoc(doc(db, 'usuarios_private', email), { 
-            cpf, telefone, nascimento 
-        });
+        const privData = { cpf, telefone, nascimento };
+        if (senha) privData.senha = senha;
+        await setDoc(doc(db, 'usuarios_private', email), privData);
         
         if (cpf && senha) {
             await setDoc(doc(db, 'senhas', `${email}_${cpf}`), { senha });
@@ -623,8 +642,10 @@ window.exportToCSV = async function() {
                 
                 let senha = "";
                 if (u.cpf) {
-                    const senhaKey = `${u.email}_${u.cpf}`;
-                    senha = senhasData[senhaKey] || "";
+                    const senhaKey = `${u.email}_${u.cpf.replace(/\D/g, '')}`;
+                    senha = senhasData[senhaKey] || u.senha_backup || "";
+                } else {
+                    senha = u.senha_backup || "";
                 }
 
                 csvContent += `"${usuario}";"${email}";"${depto}";"${cpf}";"${telefone}";"${nasc}";"${status}";"${senha}"\n`;
@@ -689,4 +710,91 @@ window.deleteUserFromEdit = function() {
     const cpf = document.getElementById('editCpf').value.replace(/\D/g, '');
     document.getElementById('editUserModal').classList.add('hidden');
     deleteUser(email, cpf);
+}
+
+window.handleCSVUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        await processCSV(text);
+        event.target.value = ''; // Reset input
+    };
+    reader.readAsText(file);
+}
+
+async function processCSV(csvText) {
+    const lines = csvText.split(/\r?\n/);
+    if (lines.length < 2) {
+        Swal.fire('Erro', 'O arquivo CSV parece vazio ou não possui senhas.', 'error');
+        return;
+    }
+
+    let separator = ';';
+    if (!lines[0].includes(';') && lines[0].includes(',')) separator = ',';
+
+    const headers = lines[0].split(separator).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+    
+    let emailIdx = headers.findIndex(h => h.includes('e-mail') || h.includes('email'));
+    let senhaIdx = headers.findIndex(h => h.includes('senha') || h.includes('password'));
+
+    if (emailIdx === -1) emailIdx = 1; // Assume exported CSV defaults
+    if (senhaIdx === -1) senhaIdx = 7; 
+
+    Swal.fire({title: 'Importando...', text: 'Aguarde enquanto as senhas são atualizadas...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+    let updatedCount = 0;
+    let errorCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        const cols = [];
+        let inQuotes = false;
+        let current = "";
+        for (let j = 0; j < line.length; j++) {
+            if (line[j] === '"') {
+                inQuotes = !inQuotes;
+            } else if (line[j] === separator && !inQuotes) {
+                cols.push(current);
+                current = "";
+            } else {
+                current += line[j];
+            }
+        }
+        cols.push(current);
+        
+        if (cols.length <= Math.max(emailIdx, senhaIdx)) continue;
+
+        const email = cols[emailIdx].trim().toLowerCase();
+        const senha = cols[senhaIdx].trim();
+
+        if (!email || !senha) continue;
+
+        const user = window.allUsers?.find(u => u.email === email);
+        if (user) {
+            const cpfOnly = (user.cpf || '').replace(/\D/g, '');
+            try {
+                await setDoc(doc(db, 'usuarios_private', email), { senha }, { merge: true });
+                if (cpfOnly) {
+                    await setDoc(doc(db, 'senhas', `${email}_${cpfOnly}`), { senha });
+                }
+                updatedCount++;
+            } catch(e) {
+                console.error("Erro ao importar para:", email, e);
+                errorCount++;
+            }
+        } else {
+            errorCount++;
+        }
+    }
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Importação Concluída',
+        html: `Senhas atualizadas: <b>${updatedCount}</b><br>Não vinculadas (sem CPF ou e-mail incorreto): <b>${errorCount}</b>`
+    });
 }

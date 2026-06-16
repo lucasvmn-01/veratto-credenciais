@@ -339,9 +339,13 @@
                                 <i class="fa-solid fa-magnifying-glass"></i>
                             </div>
                         </div>
-                        <div class="flex gap-3">
+                        <div class="flex gap-3 flex-wrap justify-end">
                             <button onclick="openAddUserModal()" class="px-5 py-3 rounded-xl text-sm font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-user-plus text-lg"></i> Novo
+                            </button>
+                            <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+                            <button onclick="document.getElementById('csvFileInput').click()" class="px-5 py-3 rounded-xl text-sm font-bold transition-all bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-import text-lg"></i> Importar
                             </button>
                             <button onclick="exportToCSV()" class="px-5 py-3 rounded-xl text-sm font-bold transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-file-csv text-lg"></i> Exportar
