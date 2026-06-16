@@ -531,3 +531,119 @@ window.saveEditUser = async function(event) {
         Swal.fire('Erro', 'Ocorreu um erro ao salvar.', 'error');
     }
 }
+
+window.openAddUserModal = function() {
+    document.getElementById('addUserForm').reset();
+    document.getElementById('addUserModal').classList.remove('hidden');
+}
+
+window.saveNewUser = async function(event) {
+    event.preventDefault();
+    const email = document.getElementById('addEmail').value.trim().toLowerCase();
+    const usuario = document.getElementById('addUsuario').value.trim();
+    const nome = document.getElementById('addNome').value.trim();
+    const depto = document.getElementById('addDepto').value.trim();
+    const cpf = document.getElementById('addCpf').value.replace(/\D/g, '');
+    const telefone = document.getElementById('addTelefone').value.replace(/\D/g, '');
+    const senha = document.getElementById('addSenha').value.trim();
+
+    let nascimento = document.getElementById('addNascimento').value;
+    if (nascimento && nascimento.includes('-')) {
+        const p = nascimento.split('-');
+        if (p.length === 3) nascimento = `${p[2]}/${p[1]}/${p[0]}`;
+    } else if (!nascimento) {
+        nascimento = '';
+    }
+
+    try {
+        Swal.fire({title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        
+        await setDoc(doc(db, 'usuarios', email), { 
+            email, usuario, nome, depto, hasCpf: !!cpf 
+        });
+        
+        await setDoc(doc(db, 'usuarios_private', email), { 
+            cpf, telefone, nascimento 
+        });
+        
+        if (cpf && senha) {
+            await setDoc(doc(db, 'senhas', `${email}_${cpf}`), { senha });
+        }
+
+        document.getElementById('addUserModal').classList.add('hidden');
+        Swal.close();
+        
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        Toast.fire({
+            icon: 'success',
+            title: 'Usuário adicionado com sucesso!'
+        });
+        
+        loadAdminDashboard();
+    } catch (error) {
+        console.error(error);
+        Swal.fire('Erro', 'Ocorreu um erro ao adicionar usuário.', 'error');
+    }
+}
+
+window.exportToCSV = async function() {
+    try {
+        Swal.fire({title: 'Gerando Planilha...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        
+        // Obter todas as senhas para associar aos usuários
+        const senhasSnap = await getDocs(collection(db, "senhas"));
+        const senhasData = {};
+        senhasSnap.forEach(doc => {
+            senhasData[doc.id] = doc.data().senha;
+        });
+
+        let csvContent = "Usuário;E-mail Corporativo;Departamento;CPF;Telefone;Nascimento;Status;Senha\n";
+
+        if (window.allUsers) {
+            window.allUsers.forEach(u => {
+                const usuario = (u.usuario || '').replace(/;/g, ',');
+                const email = (u.email || '').replace(/;/g, ',');
+                const depto = (u.depto || '').replace(/;/g, ',');
+                const cpf = (u.cpf || '').replace(/;/g, ',');
+                const telefone = (u.telefone || '').replace(/;/g, ',');
+                
+                let nasc = u.nascimento || '';
+                if (nasc.includes('-')) {
+                    const p = nasc.split('-');
+                    if (p.length === 3) nasc = `${p[2]}/${p[1]}/${p[0]}`;
+                }
+                
+                const status = u.isFullyComplete ? "Completo" : "Incompleto";
+                
+                let senha = "";
+                if (u.cpf) {
+                    const senhaKey = `${u.email}_${u.cpf}`;
+                    senha = senhasData[senhaKey] || "";
+                }
+
+                csvContent += `"${usuario}";"${email}";"${depto}";"${cpf}";"${telefone}";"${nasc}";"${status}";"${senha}"\n`;
+            });
+        }
+
+        const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "diretorio_colaboradores.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        Swal.close();
+    } catch (error) {
+        console.error(error);
+        Swal.fire('Erro', 'Ocorreu um erro ao gerar a planilha.', 'error');
+    }
+}
