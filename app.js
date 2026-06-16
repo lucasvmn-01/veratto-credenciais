@@ -404,6 +404,7 @@ window.filterAdminTable = function() {
                 <div class="flex flex-col items-center justify-center gap-2">
                     ${statusBadge}
                     <button onclick="openEditModal('${u.email}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors px-3 py-1 rounded bg-blue-50 w-full"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
+                    <button onclick="deleteUser('${u.email}', '${u.cpf || ''}')" class="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors px-3 py-1 rounded bg-rose-50 w-full"><i class="fa-solid fa-trash mr-1"></i> Excluir</button>
                 </div>
             </td>
         `;
@@ -645,5 +646,41 @@ window.exportToCSV = async function() {
     } catch (error) {
         console.error(error);
         Swal.fire('Erro', 'Ocorreu um erro ao gerar a planilha.', 'error');
+    }
+}
+
+window.deleteUser = async function(email, cpf) {
+    const result = await Swal.fire({
+        title: 'Tem certeza?',
+        text: "Esta ação não poderá ser desfeita!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Sim, excluir!',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            Swal.fire({title: 'Excluindo...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            await deleteDoc(doc(db, 'usuarios', email));
+            await deleteDoc(doc(db, 'usuarios_private', email));
+            
+            if (cpf) {
+                try {
+                    await deleteDoc(doc(db, 'senhas', `${email}_${cpf}`));
+                } catch(e) {}
+            }
+
+            Swal.close();
+            Swal.fire('Excluído!', 'O usuário foi removido com sucesso.', 'success');
+            
+            loadAdminDashboard();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Erro', 'Ocorreu um erro ao excluir o usuário.', 'error');
+        }
     }
 }
