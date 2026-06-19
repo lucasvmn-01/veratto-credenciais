@@ -355,22 +355,98 @@ function renderRequests(requests) {
     });
 }
 
+window.currentSortCol = '';
+window.currentSortDir = 'asc';
+
+window.sortTable = function(col) {
+    if (window.currentSortCol === col) {
+        window.currentSortDir = window.currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        window.currentSortCol = col;
+        window.currentSortDir = 'asc';
+    }
+    
+    // Atualizar ícones
+    const cols = ['nome', 'email', 'depto', 'cpf', 'status'];
+    cols.forEach(c => {
+        const icon = document.getElementById(`sort-icon-${c}`);
+        if (icon) {
+            if (c === window.currentSortCol) {
+                icon.className = `fa-solid ${window.currentSortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} ml-1 text-blue-600`;
+            } else {
+                icon.className = `fa-solid fa-sort ml-1 text-slate-400`;
+            }
+        }
+    });
+
+    filterAdminTable();
+}
+
 function renderUsers(users) {
     window.allUsers = users;
+    
+    const deptos = new Set();
+    users.forEach(u => {
+        if (u.depto) deptos.add(u.depto);
+    });
+    const deptoSelect = document.getElementById('filterDepto');
+    if (deptoSelect) {
+        const currentVal = deptoSelect.value;
+        deptoSelect.innerHTML = '<option value="">Todos os Departamentos</option>';
+        Array.from(deptos).sort().forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            deptoSelect.appendChild(opt);
+        });
+        if (deptos.has(currentVal)) {
+            deptoSelect.value = currentVal;
+        }
+    }
+
     window.filterAdminTable();
 }
 
 window.filterAdminTable = function() {
     const queryStr = document.getElementById('adminSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : '';
+    const deptoFilter = document.getElementById('filterDepto') ? document.getElementById('filterDepto').value : '';
     const tbody = document.getElementById('adminTableBody');
     tbody.innerHTML = '';
     
     if (!window.allUsers) return;
 
-    const filtered = window.allUsers.filter(u => 
+    let filtered = window.allUsers.filter(u => 
         u.email.toLowerCase().includes(queryStr) || 
         (u.nome && u.nome.toLowerCase().includes(queryStr))
     );
+
+    if (statusFilter === 'completo') {
+        filtered = filtered.filter(u => u.isFullyComplete);
+    } else if (statusFilter === 'incompleto') {
+        filtered = filtered.filter(u => !u.isFullyComplete);
+    }
+
+    if (deptoFilter) {
+        filtered = filtered.filter(u => u.depto === deptoFilter);
+    }
+
+    if (window.currentSortCol) {
+        filtered.sort((a, b) => {
+            let valA, valB;
+            if (window.currentSortCol === 'status') {
+                valA = a.isFullyComplete ? 1 : 0;
+                valB = b.isFullyComplete ? 1 : 0;
+            } else {
+                valA = (a[window.currentSortCol] || '').toLowerCase();
+                valB = (b[window.currentSortCol] || '').toLowerCase();
+            }
+
+            if (valA < valB) return window.currentSortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return window.currentSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
 
     filtered.forEach(u => {
         const statusBadge = u.isFullyComplete 

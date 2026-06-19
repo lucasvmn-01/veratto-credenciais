@@ -330,16 +330,26 @@
 
                 <!-- SUB-SEÇÃO 2: DIRETÓRIO -->
                 <div id="panel-directory" class="hidden">
-                    <div class="p-8 border-b border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between bg-white">
-                        <div class="relative w-full md:max-w-md">
-                            <input type="text" id="adminSearch" oninput="filterAdminTable()" 
-                                class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors font-medium bg-slate-50 focus:bg-white"
-                                placeholder="Buscar colaboradores...">
-                            <div class="absolute left-4 top-3.5 text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass"></i>
+                    <div class="p-8 border-b border-slate-200 flex flex-col xl:flex-row gap-4 items-center justify-between bg-white">
+                        <div class="flex flex-col md:flex-row gap-4 w-full xl:w-auto">
+                            <div class="relative w-full md:w-64">
+                                <input type="text" id="adminSearch" oninput="filterAdminTable()" 
+                                    class="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors font-medium bg-slate-50 focus:bg-white text-sm"
+                                    placeholder="Buscar colaboradores...">
+                                <div class="absolute left-4 top-3.5 text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </div>
                             </div>
+                            <select id="filterStatus" onchange="filterAdminTable()" class="w-full md:w-auto px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors font-medium bg-slate-50 focus:bg-white text-sm">
+                                <option value="">Todos os Status</option>
+                                <option value="completo">Completo</option>
+                                <option value="incompleto">Incompleto</option>
+                            </select>
+                            <select id="filterDepto" onchange="filterAdminTable()" class="w-full md:w-auto px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none transition-colors font-medium bg-slate-50 focus:bg-white text-sm">
+                                <option value="">Todos os Departamentos</option>
+                            </select>
                         </div>
-                        <div class="flex gap-3 flex-wrap justify-end">
+                        <div class="flex gap-3 flex-wrap justify-start xl:justify-end w-full xl:w-auto">
                             <button onclick="openAddUserModal()" class="px-5 py-3 rounded-xl text-sm font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-user-plus text-lg"></i> Novo
                             </button>
@@ -356,12 +366,12 @@
                     <div class="overflow-x-auto p-8 pt-0">
                         <table class="w-full text-left border-collapse border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-6">
                             <thead>
-                                <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-extrabold tracking-wider border-b border-slate-200">
-                                    <th class="py-4 px-6">Usuário</th>
-                                    <th class="py-4 px-6">E-mail Corporativo</th>
-                                    <th class="py-4 px-6">Departamento</th>
-                                    <th class="py-4 px-6">Dados Pessoais</th>
-                                    <th class="py-4 px-6 text-center">Status</th>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-xs font-extrabold tracking-wider border-b border-slate-200 select-none">
+                                    <th class="py-4 px-6 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortTable('nome')">Usuário <i class="fa-solid fa-sort ml-1 text-slate-400" id="sort-icon-nome"></i></th>
+                                    <th class="py-4 px-6 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortTable('email')">E-mail Corporativo <i class="fa-solid fa-sort ml-1 text-slate-400" id="sort-icon-email"></i></th>
+                                    <th class="py-4 px-6 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortTable('depto')">Departamento <i class="fa-solid fa-sort ml-1 text-slate-400" id="sort-icon-depto"></i></th>
+                                    <th class="py-4 px-6 cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortTable('cpf')">Dados Pessoais <i class="fa-solid fa-sort ml-1 text-slate-400" id="sort-icon-cpf"></i></th>
+                                    <th class="py-4 px-6 text-center cursor-pointer hover:bg-slate-200 transition-colors" onclick="sortTable('status')">Status <i class="fa-solid fa-sort ml-1 text-slate-400" id="sort-icon-status"></i></th>
                                 </tr>
                             </thead>
                             <tbody id="adminTableBody" class="divide-y divide-slate-100 text-sm font-medium bg-white">
