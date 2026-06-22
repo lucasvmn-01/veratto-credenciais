@@ -698,10 +698,11 @@ window.exportToCSV = async function() {
             senhasData[doc.id] = doc.data().senha;
         });
 
-        let csvContent = "Usuário;E-mail Corporativo;Departamento;CPF;Telefone;Nascimento;Status;Senha\n";
+        let csvContent = "Nome;Usuário;E-mail Corporativo;Departamento;CPF;Telefone;Nascimento;Status;Senha\n";
 
         if (window.allUsers) {
             window.allUsers.forEach(u => {
+                const nome = (u.nome || '').replace(/;/g, ',');
                 const usuario = (u.usuario || '').replace(/;/g, ',');
                 const email = (u.email || '').replace(/;/g, ',');
                 const depto = (u.depto || '').replace(/;/g, ',');
@@ -724,7 +725,7 @@ window.exportToCSV = async function() {
                     senha = u.senha_backup || "";
                 }
 
-                csvContent += `"${usuario}";"${email}";"${depto}";"${cpf}";"${telefone}";"${nasc}";"${status}";"${senha}"\n`;
+                csvContent += `"${nome}";"${usuario}";"${email}";"${depto}";"${cpf}";"${telefone}";"${nasc}";"${status}";"${senha}"\n`;
             });
         }
 
